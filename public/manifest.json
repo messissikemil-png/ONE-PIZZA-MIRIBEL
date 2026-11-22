@@ -1,0 +1,16 @@
+{
+  "name": "ONE PIZZA — Miribel",
+  "short_name": "ONE PIZZA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "icons": [
+    {
+      "src": "/assets/aistudio/images.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
