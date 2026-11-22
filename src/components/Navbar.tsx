@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Menu, Phone, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Menu, Phone, X, Volume2, VolumeX, Download } from 'lucide-react';
 import { RESTAURANT_INFO } from '../data/menuData';
 
 const NAV_LINKS = [
@@ -22,6 +22,58 @@ export function Navbar() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showIosGuide, setShowIosGuide] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio('/assets/aistudio/ambiance.mp3');
+    audio.loop = true;
+    audio.volume = 0.3;
+    audioRef.current = audio;
+
+    const startOnFirstClick = () => {
+      if (audioRef.current && audioRef.current.paused) {
+        audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      }
+      window.removeEventListener('click', startOnFirstClick);
+    };
+    window.addEventListener('click', startOnFirstClick);
+
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    return () => {
+      window.removeEventListener('click', startOnFirstClick);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      audio.pause();
+    };
+  }, []);
+
+  const toggleMusic = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+    }
+  };
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
+    } else {
+      setShowIosGuide(true);
+    }
+  };
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[#121212]/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-8 px-4 sm:px-6 lg:h-16">
@@ -67,6 +119,24 @@ export function Navbar() {
               />
             </a>
           ))}
+          <button
+            type="button"
+            onClick={toggleMusic}
+            aria-label="Musique d'ambiance"
+            className="p-2 rounded-full text-stone-300 hover:text-[#FF6B00] hover:bg-white/5 transition-colors"
+            title={isPlaying ? 'Couper la musique' : 'Activer la musique'}
+          >
+            {isPlaying ? <Volume2 className="h-4 w-4 text-[#FF6B00]" /> : <VolumeX className="h-4 w-4" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleInstallClick}
+            className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Installer</span>
+          </button>
         </nav>
 
         {/* Zone 3: Single primary action CTA (desktop) + mobile menu button */}
@@ -111,7 +181,50 @@ export function Navbar() {
               </a>
             ))}
           </div>
+          <div className="mt-3 flex items-center gap-3 border-t border-white/10 pt-3">
+            <button
+              type="button"
+              onClick={toggleMusic}
+              aria-label="Musique d'ambiance"
+              className="flex items-center gap-2 rounded-full bg-white/5 px-3 py-2 text-xs font-medium text-stone-300 hover:text-[#FF6B00] transition-colors"
+            >
+              {isPlaying ? <Volume2 className="h-4 w-4 text-[#FF6B00]" /> : <VolumeX className="h-4 w-4" />}
+              <span>{isPlaying ? 'Musique : ON' : 'Musique : OFF'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20 transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>Installer l'app</span>
+            </button>
+          </div>
         </nav>
+      )}
+   {showIosGuide && (
+        <div
+          onClick={() => setShowIosGuide(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-xs space-y-3 rounded-2xl border border-white/10 bg-[#1c1c1c] p-5 text-center text-white"
+          >
+            <p className="text-base font-semibold">Installer ONE PIZZA</p>
+            <p className="text-sm text-stone-300">
+              Sur iPhone/iPad (Safari) : appuie sur le bouton <strong>Partager</strong> en bas de l'écran, puis choisis <strong>« Sur l'écran d'accueil »</strong>.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowIosGuide(false)}
+              className="w-full rounded-xl bg-[#FF6B00] py-2 text-sm font-semibold text-black"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
       )}
     </header>
   );
